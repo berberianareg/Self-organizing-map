@@ -13,7 +13,7 @@ Websites
 --------
     https://en.wikipedia.org/wiki/Self-organizing_map
 
-Relevant papers
+Relevant paper
 --------
     https://doi.org/10.1016/j.neunet.2009.06.011
 
@@ -21,6 +21,7 @@ Relevant papers
 #%% import libraries and modules
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 #%% build the SOM model
 class SOM:
@@ -137,6 +138,18 @@ w = som.learning(inp)                                                           
 out = som.outputs(inp, w)                                                       # output patterns
 
 #%% plot figures
+
+cwd = os.getcwd()                                                               # get current working directory
+fileName = 'images'                                                             # specify filename
+
+if os.path.exists(os.path.join(cwd, fileName)) == False:                        # if path does not exist
+    os.makedirs(fileName)                                                       # create directory with specified filename
+    os.chdir(os.path.join(cwd, fileName))                                       # change cwd to the given path
+    cwd = os.getcwd()                                                           # get current working directory
+else:
+    os.chdir(os.path.join(cwd, fileName))                                       # change cwd to the given path
+    cwd = os.getcwd()                                                           # get current working directory
+
 fig, ax = plt.subplots(nrows=som.dimProto,ncols=som.dimExamp,sharex=True,sharey=True)
 for iProto in range(som.dimProto):
     for iExamp in range(som.dimExamp):
@@ -145,14 +158,15 @@ for iProto in range(som.dimProto):
 plt.xticks([]),plt.yticks([])
 fig.suptitle('Input patterns')
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(os.getcwd(), 'figure_1'))
 
 fig, ax = plt.subplots()
 plt.imshow(out)
 plt.title('2D topology')
 plt.xticks([])
 plt.yticks([])
-plt.show()
+fig.tight_layout()
+fig.savefig(os.path.join(os.getcwd(), 'figure_2'))
 
 del ax, fig, iExamp, iProto
 
