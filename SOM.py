@@ -64,16 +64,20 @@ class SOM:
         for iProto in range(self.dimProto):
             # random seed
             np.random.seed(iProto)
-            # generate binary input data
-            inp[iProto] = np.tile((np.random.uniform(self.ruMin, self.ruMax, size=self.dimX) > self.ruLim).astype(int), (self.dimExamp,1))
+            # generate uniform data
+            uniform_data = np.random.uniform(low=self.ruMin, high=self.ruMax, size=self.dimX)
+            # transform uniform data to binary data
+            binary_data = (uniform_data > self.ruLim).astype(int)
+            # create copies of the binary data
+            inp[iProto] = np.tile(binary_data, (self.dimExamp, 1))
             for iExamp in range(1,self.dimExamp):
                 # random seed
                 np.random.seed(iExamp)
-                # number of pixels to flip
-                dimFlip = np.random.randint(self.dimMinFlip,self.dimMaxFlip+1,1)
-                # index of pixels to flip
-                idxFlip = np.random.choice(self.dimX,dimFlip,replace=False)
-                # perform pixel flip
+                # specify number of pixels to flip
+                dimFlip = np.random.randint(low=self.dimMinFlip, high=self.dimMaxFlip+1, size=1)
+                # specify index of pixels to flip
+                idxFlip = np.random.choice(self.dimX, size=dimFlip, replace=False)
+                # perform pixel flip (0 -> 1; 1 -> 0)
                 inp[iProto][iExamp][idxFlip] = 1-(inp[iProto][0][idxFlip])
         return inp
  
@@ -82,10 +86,10 @@ class SOM:
         # random seed
         np.random.seed(1)
         # initial random uniform connection weight matrix
-        w = np.random.uniform(low=self.wMin, high=self.wMax, size=(self.dimX, self.dimY))
+        weights = np.random.uniform(low=self.wMin, high=self.wMax, size=(self.dimX, self.dimY))
         # random seed
         np.random.seed(16)
-        # random selection of examplars
+        # random sequence of examplar selection
         randSample = np.random.choice(self.dimExamp, self.dimExamp, replace=False)
         iExamp = 0
         while iExamp < self.dimExamp:
@@ -93,23 +97,27 @@ class SOM:
             while iProto < self.dimProto:
                 iIter = 0
                 while iIter < self.nbIter:
-                    # find the position of the winning output unit whos weight vector matches the input vector most closely (norm of their differences)
-                    idxWinner = np.argmin((np.square(inp[iProto][randSample[iExamp]] - w.T)).sum(axis=1))
-                    # topological neighbourhood function (Gaussian centering around winning node, and decreasing in all directions from it)
-                    h = np.transpose([np.exp(-np.square(np.arange(self.dimY) - idxWinner)/(2*np.square(self.sigma[iIter])))])
+                    # find the position of the winning unit whos weight vector matches the input vector most closely (norm of their differences)
+                    idxWinner = np.argmin((np.square(inp[iProto][randSample[iExamp]] - weights.T)).sum(axis=1))
+                    # specify the position of all output units
+                    idxUnits = np.arange(self.dimY)
+                    # compute distance between winning unit and all output units
+                    neighbourhood_distance = idxUnits - idxWinner
+                    # topological neighbourhood function (Gaussian centering around winning unit, and decreasing in all directions from it)
+                    h = np.exp(-np.square(neighbourhood_distance)/(2*np.square(self.sigma[iIter])))
                     # update connection weights of winning unit and its proximal neighbours
-                    w = w + self.eta[iIter] * (h * (inp[iProto][randSample[iExamp]] - w.T)).T
+                    weights = weights + self.eta[iIter] * (np.transpose([h]) * (inp[iProto][randSample[iExamp]] - weights.T)).T
                     iIter += 1
                 iProto += 1
             iExamp += 1
-        return w
+        return weights
 
-    def test(self, inp, w):
+    def test(self, inp, weights):
         """Compute activations and network outputs."""
         # compute activation
-        activation = np.dot(np.vstack(np.array(inp)),w)
+        activation = np.dot(np.vstack(np.array(inp)), weights)
         # for each output unit, find the category containing the examplar that yields the highest level of activation
-        data = np.argmax(activation,axis=0)
+        data = np.argmax(activation, axis=0)
         # categorize data into n different bins of equal size
         out = np.digitize(x=data, bins=np.linspace(0, self.dimProto*self.dimExamp, self.dimExamp)).reshape(int(np.sqrt(self.dimY)), int(np.sqrt(self.dimY)))
         return out
@@ -117,8 +125,8 @@ class SOM:
 #%% run the SOM model
 som = SOM()                                                                     # instantiate SOM class
 inp = som.inputs()                                                              # input patterns
-w = som.train(inp)                                                              # perform learning
-out = som.test(inp, w)                                                          # perform testing
+weights = som.train(inp)                                                        # perform learning
+out = som.test(inp, weights)                                                    # perform testing
 
 #%% plot figures
 
