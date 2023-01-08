@@ -62,34 +62,36 @@ class SOM:
         self.max_random_uniform = max_random_uniform                            # random uniform distribution max (default: 10)
         self.random_uniform_limit = random_uniform_limit                        # random uniform distribution limit (default: 5)
 
-    def inputs(self):
+    def make_inputs(self):
         """Construct artificial input patterns for prototype-based categorization."""
         # array for storing input data
         input_data = np.zeros([self.num_prototypes, self.num_examples, self.input_size])
-        for iProto in range(self.num_prototypes):
+        for prototype_index in range(self.num_prototypes):
             # random seed
-            np.random.seed(iProto)
+            np.random.seed(prototype_index)
             # generate uniform data
             uniform_data = np.random.uniform(low=self.min_random_uniform, high=self.max_random_uniform, size=self.input_size)
             # transform uniform data to binary data
             binary_data = (uniform_data > self.random_uniform_limit).astype(int)
             # create copies of the binary data
-            input_data[iProto,:,:] = np.tile(binary_data, (self.num_examples, 1))
-            for iExamp in range(1, self.num_examples):
+            input_data[prototype_index,:,:] = np.tile(binary_data, (self.num_examples, 1))
+            for example_index in range(1, self.num_examples):
                 # random seed
-                np.random.seed(iExamp)
+                np.random.seed(example_index)
                 # specify number of pixels to flip
-                dimFlip = np.random.randint(low=self.min_num_pixel_flips, high=self.max_num_pixel_flips+1, size=1)
+                num_pixel_flips = np.random.randint(low=self.min_num_pixel_flips, high=self.max_num_pixel_flips+1, size=1)
                 # specify index of pixels to flip
-                idxFlip = np.random.choice(self.input_size, size=dimFlip, replace=False)
+                pixel_flip_indices = np.random.choice(self.input_size, size=num_pixel_flips, replace=False)
                 # perform pixel flip (0 -> 1; 1 -> 0)
-                input_data[iProto,iExamp,idxFlip] = 1-(input_data[iProto,0,idxFlip])
+                input_data[prototype_index,example_index,pixel_flip_indices] = 1-(input_data[prototype_index,0,pixel_flip_indices])
         return np.vstack(input_data)
     
     def train(self, input_data):
         """Learning procedure."""
         # initial random uniform connection weight matrix
-        weights = np.random.uniform(low=self.min_weight, high=self.max_weight, size=(self.output_size, self.input_size))
+        weights = np.random.uniform(low=self.min_weight,
+                                    high=self.max_weight,
+                                    size=(self.output_size, self.input_size))
         # random sequence of input selection
         random_sample = np.random.choice(self.num_examples * self.num_prototypes,
                                          self.num_examples * self.num_prototypes, replace=False)
@@ -123,15 +125,16 @@ class SOM:
 
 #%% run the SOM model
 som = SOM()                                                                     # instantiate SOM class
-input_data = som.inputs()                                                       # input patterns
+input_data = som.make_inputs()                                                  # input patterns
 weights = som.train(input_data)                                                 # perform learning
-output_data = som.test(input_data, weights)                                             # perform testing
+output_data = som.test(input_data, weights)                                     # perform testing
 
 #%% plot figures
 
 cwd = os.getcwd()                                                               # get current working directory
 fileName = 'images'                                                             # specify filename
 
+# filepath and directory specifications
 if os.path.exists(os.path.join(cwd, fileName)) == False:                        # if path does not exist
     os.makedirs(fileName)                                                       # create directory with specified filename
     os.chdir(os.path.join(cwd, fileName))                                       # change cwd to the given path
@@ -140,6 +143,7 @@ else:
     os.chdir(os.path.join(cwd, fileName))                                       # change cwd to the given path
     cwd = os.getcwd()                                                           # get current working directory
 
+# figure 1
 fig = plt.figure()
 for input_index in range(1, som.num_examples * som.num_prototypes + 1):
     fig.add_subplot(som.num_prototypes, som.num_examples, input_index)
@@ -149,6 +153,7 @@ fig.suptitle('Input patterns')
 fig.tight_layout()
 fig.savefig(os.path.join(os.getcwd(), 'figure_1'))
 
+# figure 2
 fig = plt.figure()
 plt.imshow(output_data)
 plt.title('2D topology')
