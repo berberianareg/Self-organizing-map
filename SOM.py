@@ -29,7 +29,7 @@ class SOM:
     
     def __init__(self,
                  input_size=36, output_size=100,
-                 min_weight=0.05, max_weight=0.2,
+                 min_connection_weight=0.05, max_connection_weight=0.2,
                  num_iterations=100, learning_rate_decay=15, initial_learning_rate=0.5,
                  neighborhood_decay=10, initial_neighborhood_size=10,
                  num_prototypes=4, num_examples=5,
@@ -40,8 +40,8 @@ class SOM:
         self.input_size = input_size                                            # dimension of input layer X (default: 36)
         self.output_size = output_size                                          # dimension of output layer Y (default: 100)
         # connection weights parameters
-        self.min_weight = min_weight                                            # min connection weight (default: 0.05)
-        self.max_weight = max_weight                                            # max connection weight (default: 0.2)
+        self.min_connection_weight = min_connection_weight                      # min connection weight (default: 0.05)
+        self.max_connection_weight = max_connection_weight                      # max connection weight (default: 0.2)
         # learning parameters
         self.num_iterations = num_iterations                                    # nb of learning iterations (default: 100)
         self.learning_rate_decay = learning_rate_decay                          # time constant controlling learning rate decrease over trials (default: 15)
@@ -50,7 +50,7 @@ class SOM:
         # neighborhood function parameters
         self.neighborhood_decay = neighborhood_decay                            # time constant controlling neighborhood size decrease over trials (default: 10)
         self.initial_neighborhood_size = initial_neighborhood_size              # initial topological neighborhood size (default: 10)
-        self.sigma = self.initial_neighborhood_size * np.exp(-np.arange(self.num_iterations)/self.neighborhood_decay) # topological neighborhood size over trials
+        self.neighborhood_sizes = self.initial_neighborhood_size * np.exp(-np.arange(self.num_iterations)/self.neighborhood_decay) # topological neighborhood size over trials
         # dimension of prototypes and examplars
         self.num_prototypes = num_prototypes                                    # dimension of prototypes (default: 4)
         self.num_examples = num_examples                                        # dimension of examplars (default: 5)
@@ -89,28 +89,27 @@ class SOM:
     def train(self, input_data):
         """Learning procedure."""
         # initial random uniform connection weight matrix
-        weights = np.random.uniform(low=self.min_weight,
-                                    high=self.max_weight,
+        weights = np.random.uniform(low=self.min_connection_weight,
+                                    high=self.max_connection_weight,
                                     size=(self.output_size, self.input_size))
         # random sequence of input selection
         random_sample = np.random.choice(self.num_examples * self.num_prototypes,
                                          self.num_examples * self.num_prototypes, replace=False)
         input_index = 0
-        while input_index < self.num_examples * self.num_prototypes:
+        for input_index in range(self.num_examples * self.num_prototypes):
             iteration_index = 0
             while iteration_index < self.num_iterations:
                 # find the position of the winning unit whos weight vector matches the input vector most closely (norm of their differences)
                 winning_unit_index = np.argmin((np.square(input_data[random_sample[input_index]] - weights)).sum(axis=1))
                 # specify the position of all output units
                 unit_indices = np.arange(self.output_size)
-                # compute distance between winning unit and all output units
-                neighborhood_distance = unit_indices - winning_unit_index
+                # compute distances from winning unit
+                distances_from_winning_unit = unit_indices - winning_unit_index
                 # topological neighborhood function (Gaussian centering around winning unit, and decreasing in all directions from it)
-                h = np.exp(-np.square(neighborhood_distance)/(2*np.square(self.sigma[iteration_index])))
+                gaussian_topology = np.exp(-np.square(distances_from_winning_unit)/(2*np.square(self.neighborhood_sizes[iteration_index])))
                 # update connection weights of winning unit and its proximal neighbours
-                weights = weights + self.learning_rates[iteration_index] * (h[:,np.newaxis] * (input_data[random_sample[input_index]] - weights))
+                weights = weights + self.learning_rates[iteration_index] * (gaussian_topology[:,np.newaxis] * (input_data[random_sample[input_index]] - weights))
                 iteration_index += 1
-            input_index += 1
         return weights
 
     def test(self, input_data, weights):
