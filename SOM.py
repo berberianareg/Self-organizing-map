@@ -47,10 +47,10 @@ class SOM:
         self.learning_rate_decay = learning_rate_decay                          # time constant controlling learning rate decrease over trials (default: 15)
         self.initial_learning_rate = initial_learning_rate                      # initial learning rate (default: 0.5)
         self.learning_rates = self.initial_learning_rate * np.exp(-np.arange(self.num_iterations)/self.learning_rate_decay) # learning rate over trials
-        # neighbourhood function parameters
-        self.neighborhood_decay = neighborhood_decay                            # time constant controlling neighbourhood size decrease over trials (default: 10)
-        self.initial_neighborhood_size = initial_neighborhood_size              # initial topological neighbourhood size (default: 10)
-        self.sigma = self.initial_neighborhood_size * np.exp(-np.arange(self.num_iterations)/self.neighborhood_decay) # topological neighbourhood size over trials
+        # neighborhood function parameters
+        self.neighborhood_decay = neighborhood_decay                            # time constant controlling neighborhood size decrease over trials (default: 10)
+        self.initial_neighborhood_size = initial_neighborhood_size              # initial topological neighborhood size (default: 10)
+        self.sigma = self.initial_neighborhood_size * np.exp(-np.arange(self.num_iterations)/self.neighborhood_decay) # topological neighborhood size over trials
         # dimension of prototypes and examplars
         self.num_prototypes = num_prototypes                                    # dimension of prototypes (default: 4)
         self.num_examples = num_examples                                        # dimension of examplars (default: 5)
@@ -103,7 +103,7 @@ class SOM:
                 unit_indices = np.arange(self.output_size)
                 # compute distance between winning unit and all output units
                 neighborhood_distance = unit_indices - winning_unit_index
-                # topological neighbourhood function (Gaussian centering around winning unit, and decreasing in all directions from it)
+                # topological neighborhood function (Gaussian centering around winning unit, and decreasing in all directions from it)
                 h = np.exp(-np.square(neighborhood_distance)/(2*np.square(self.sigma[iteration_index])))
                 # update connection weights of winning unit and its proximal neighbours
                 weights = weights + self.learning_rates[iteration_index] * (h[:,np.newaxis] * (input_data[random_sample[input_index]] - weights))
