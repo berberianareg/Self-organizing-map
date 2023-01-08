@@ -60,7 +60,8 @@ class SOM:
     def inputs(self):
         """Construct artificial input patterns for prototype-based categorization."""
         # empty list for storing input data
-        inp = [[] for iProto in range(self.dimProto)]
+        # inp = [[] for iProto in range(self.dimProto)]
+        inp = np.zeros([self.dimProto, self.dimExamp, self.dimX])
         for iProto in range(self.dimProto):
             # random seed
             np.random.seed(iProto)
@@ -69,8 +70,8 @@ class SOM:
             # transform uniform data to binary data
             binary_data = (uniform_data > self.ruLim).astype(int)
             # create copies of the binary data
-            inp[iProto] = np.tile(binary_data, (self.dimExamp, 1))
-            for iExamp in range(1,self.dimExamp):
+            inp[iProto,:,:] = np.tile(binary_data, (self.dimExamp, 1))
+            for iExamp in range(1, self.dimExamp):
                 # random seed
                 np.random.seed(iExamp)
                 # specify number of pixels to flip
@@ -78,44 +79,38 @@ class SOM:
                 # specify index of pixels to flip
                 idxFlip = np.random.choice(self.dimX, size=dimFlip, replace=False)
                 # perform pixel flip (0 -> 1; 1 -> 0)
-                inp[iProto][iExamp][idxFlip] = 1-(inp[iProto][0][idxFlip])
-        return inp
- 
+                inp[iProto,iExamp,idxFlip] = 1-(inp[iProto,0,idxFlip])
+        return np.vstack(inp)
+    
     def train(self, inp):
         """Learning procedure."""
-        # random seed
-        np.random.seed(1)
         # initial random uniform connection weight matrix
-        weights = np.random.uniform(low=self.wMin, high=self.wMax, size=(self.dimX, self.dimY))
-        # random seed
-        np.random.seed(16)
-        # random sequence of examplar selection
-        randSample = np.random.choice(self.dimExamp, self.dimExamp, replace=False)
-        iExamp = 0
-        while iExamp < self.dimExamp:
-            iProto = 0
-            while iProto < self.dimProto:
-                iIter = 0
-                while iIter < self.nbIter:
-                    # find the position of the winning unit whos weight vector matches the input vector most closely (norm of their differences)
-                    idxWinner = np.argmin((np.square(inp[iProto][randSample[iExamp]] - weights.T)).sum(axis=1))
-                    # specify the position of all output units
-                    idxUnits = np.arange(self.dimY)
-                    # compute distance between winning unit and all output units
-                    neighbourhood_distance = idxUnits - idxWinner
-                    # topological neighbourhood function (Gaussian centering around winning unit, and decreasing in all directions from it)
-                    h = np.exp(-np.square(neighbourhood_distance)/(2*np.square(self.sigma[iIter])))
-                    # update connection weights of winning unit and its proximal neighbours
-                    weights = weights + self.eta[iIter] * (np.transpose([h]) * (inp[iProto][randSample[iExamp]] - weights.T)).T
-                    iIter += 1
-                iProto += 1
-            iExamp += 1
+        weights = np.random.uniform(low=self.wMin, high=self.wMax, size=(self.dimY, self.dimX))
+        # random sequence of input selection
+        randSample = np.random.choice(self.dimExamp * self.dimProto,
+                                      self.dimExamp * self.dimProto, replace=False)
+        iInput = 0
+        while iInput < self.dimExamp * self.dimProto:
+            iIter = 0
+            while iIter < self.nbIter:
+                # find the position of the winning unit whos weight vector matches the input vector most closely (norm of their differences)
+                idxWinner = np.argmin((np.square(inp[randSample[iInput]] - weights)).sum(axis=1))
+                # specify the position of all output units
+                idxUnits = np.arange(self.dimY)
+                # compute distance between winning unit and all output units
+                neighbourhood_distance = idxUnits - idxWinner
+                # topological neighbourhood function (Gaussian centering around winning unit, and decreasing in all directions from it)
+                h = np.exp(-np.square(neighbourhood_distance)/(2*np.square(self.sigma[iIter])))
+                # update connection weights of winning unit and its proximal neighbours
+                weights = weights + self.eta[iIter] * (h[:,np.newaxis] * (inp[randSample[iInput]] - weights))
+                iIter += 1
+            iInput += 1
         return weights
 
     def test(self, inp, weights):
         """Compute activations and network outputs."""
         # compute activation
-        activation = np.dot(np.vstack(np.array(inp)), weights)
+        activation = np.dot(inp, weights.T)
         # for each output unit, find the category containing the examplar that yields the highest level of activation
         data = np.argmax(activation, axis=0)
         # categorize data into n different bins of equal size
@@ -141,22 +136,20 @@ else:
     os.chdir(os.path.join(cwd, fileName))                                       # change cwd to the given path
     cwd = os.getcwd()                                                           # get current working directory
 
-fig, ax = plt.subplots(nrows=som.dimProto,ncols=som.dimExamp,sharex=True,sharey=True)
-for iProto in range(som.dimProto):
-    for iExamp in range(som.dimExamp):
-        ax[iProto,iExamp].imshow(np.reshape(inp[iProto][iExamp],(int(np.sqrt(som.dimX)),int(np.sqrt(som.dimX)))))
-        ax[iProto,0].set_ylabel('Cat. {}'.format(iProto+1))
-plt.xticks([]),plt.yticks([])
+fig = plt.figure()
+for iInput in range(1, som.dimExamp * som.dimProto + 1):
+    fig.add_subplot(som.dimProto, som.dimExamp, iInput)
+    plt.imshow(inp[iInput-1].reshape(int(np.sqrt(som.dimX)), int(np.sqrt(som.dimX))))
+    plt.xticks(ticks=[]), plt.yticks(ticks=[])
 fig.suptitle('Input patterns')
 fig.tight_layout()
 fig.savefig(os.path.join(os.getcwd(), 'figure_1'))
 
-fig, ax = plt.subplots()
+fig = plt.figure()
 plt.imshow(out)
 plt.title('2D topology')
-plt.xticks([])
-plt.yticks([])
+plt.xticks(ticks=[]), plt.yticks(ticks=[])
 fig.tight_layout()
 fig.savefig(os.path.join(os.getcwd(), 'figure_2'))
 
-del ax, fig, iExamp, iProto
+del fig, iInput
