@@ -121,6 +121,26 @@ class SOM:
         # categorize data into n different bins of equal size
         out = np.digitize(x=data, bins=np.linspace(0, self.num_prototypes*self.num_examples, self.num_examples)).reshape(int(np.sqrt(self.output_size)), int(np.sqrt(self.output_size)))
         return out
+    
+    def plot_input_patterns(self):
+        """Plot input patterns."""
+        fig = plt.figure()
+        for input_index in range(1, som.num_examples * som.num_prototypes + 1):
+            fig.add_subplot(som.num_prototypes, som.num_examples, input_index)
+            plt.imshow(input_data[input_index-1].reshape(int(np.sqrt(som.input_size)), int(np.sqrt(som.input_size))))
+            plt.xticks(ticks=[]), plt.yticks(ticks=[])
+        fig.suptitle('Input patterns')
+        fig.tight_layout()
+        fig.savefig(os.path.join(os.getcwd(), 'figure_1'))
+        
+    def plot_map_formation(self):
+        """Plot map formation."""
+        fig = plt.figure()
+        plt.imshow(output_data)
+        plt.title('2D topology')
+        plt.xticks(ticks=[]), plt.yticks(ticks=[])
+        fig.tight_layout()
+        fig.savefig(os.path.join(os.getcwd(), 'figure_2'))
 
 #%% run the SOM model
 som = SOM()                                                                     # instantiate SOM class
@@ -129,7 +149,6 @@ weights = som.train(input_data)                                                 
 output_data = som.test(input_data, weights)                                     # perform testing
 
 #%% plot figures
-
 cwd = os.getcwd()                                                               # get current working directory
 fileName = 'images'                                                             # specify filename
 
@@ -142,22 +161,5 @@ else:
     os.chdir(os.path.join(cwd, fileName))                                       # change cwd to the given path
     cwd = os.getcwd()                                                           # get current working directory
 
-# figure 1
-fig = plt.figure()
-for input_index in range(1, som.num_examples * som.num_prototypes + 1):
-    fig.add_subplot(som.num_prototypes, som.num_examples, input_index)
-    plt.imshow(input_data[input_index-1].reshape(int(np.sqrt(som.input_size)), int(np.sqrt(som.input_size))))
-    plt.xticks(ticks=[]), plt.yticks(ticks=[])
-fig.suptitle('Input patterns')
-fig.tight_layout()
-fig.savefig(os.path.join(os.getcwd(), 'figure_1'))
-
-# figure 2
-fig = plt.figure()
-plt.imshow(output_data)
-plt.title('2D topology')
-plt.xticks(ticks=[]), plt.yticks(ticks=[])
-fig.tight_layout()
-fig.savefig(os.path.join(os.getcwd(), 'figure_2'))
-
-del fig, input_index
+som.plot_input_patterns()
+som.plot_map_formation()
